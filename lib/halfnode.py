@@ -26,6 +26,9 @@ if settings.COINDAEMON_ALGO == 'scrypt':
 elif settings.COINDAEMON_ALGO == 'quark':
     log.debug("########################################### Loading Quark Support #########################################################")
     import quark_hash
+elif settings.COINDAEMON_ALGO == 'zny_yescrypt':
+    log.debug("########################################### Loading Yescrypt Support #########################################################")
+    import zny_yescrypt
 else:
     log.debug("########################################### Loading SHA256 Support ######################################################")
 
@@ -241,6 +244,8 @@ class CBlock(object):
             self.quark = None
         elif settings.COINDAEMON_ALGO == 'riecoin':
             self.riecoin = None
+        elif settings.COINDAEMON_ALGO == 'zny_yescrypt':
+            self.zny_yescrypt = None
         else: pass
         if settings.COINDAEMON_Reward == 'POS':
             self.signature = b""
@@ -318,6 +323,19 @@ class CBlock(object):
                 sha256 = uint256_from_str(SHA256.new(SHA256.new(''.join(r)).digest()).digest())
                 self.riecoin = riecoinPoW( sha256, uint256_from_compact(self.nBits), self.nNonce )
              return self.riecoin
+    elif settings.COINDAEMON_ALGO == 'zny_yescrypt':
+       def calc_zny_yescrypt(self):
+           if self.zny_yescrypt is None:
+               r = []
+               r.append(struct.pack("<i", self.nVersion))
+               r.append(ser_uint256(self.hashPrevBlock))
+               r.append(ser_uint256(self.hashMerkleRoot))
+               r.append(struct.pack("<I", self.nTime))
+               r.append(struct.pack("<I", self.nBits))
+               r.append(struct.pack("<I", self.nNonce))
+               self.zny_yescrypt = uint256_from_str(zny_yescrypt.getPoWHash(''.join(r)))
+           return self.zny_yescrypt
+
     else:
        def calc_sha256(self):
            if self.sha256 is None:
@@ -339,6 +357,8 @@ class CBlock(object):
             self.calc_scrypt()
         elif settings.COINDAEMON_ALGO == 'quark':
             self.calc_quark()
+        elif settings.COINDAEMON_ALGO == 'zny_yescrypt':
+            self.calc_zny_yescrypt()
         else:
             self.calc_sha256()
 
@@ -356,6 +376,9 @@ class CBlock(object):
         elif settings.COINDAEMON_ALGO == 'quark':
             if self.quark > target:
                 return False
+        elif settings.COINDAEMON_ALGO == 'zny_yescrypt':
+            if self.zny_yescrypt > target:
+                return false
         else:
            if self.sha256 > target:
                 return False
